@@ -9,7 +9,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "typecheck": "tsc -b --noEmit"
+    "typecheck": "tsc -b --noEmit",
+    "check:logic": "esbuild scripts/logic-check.ts --bundle --platform=node | node"
   },
   "dependencies": {
     "react": "^18.3.1",
