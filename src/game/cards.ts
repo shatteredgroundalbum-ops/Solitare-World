@@ -46,6 +46,24 @@ export function makeDeck(): Card[] {
   return deck
 }
 
+// Build `decks` standard 52-card decks, optionally restricting to a subset of
+// suits (used by Spider for 1- and 2-suit variants). Card ids are made unique
+// with a copy index so multiple identical cards can coexist.
+export function makeDecks(decks: number, suits: Suit[] = SUITS): Card[] {
+  const cards: Card[] = []
+  const copiesPerSuit = (decks * 4) / suits.length
+  let copy = 0
+  for (let d = 0; d < copiesPerSuit; d++) {
+    for (const suit of suits) {
+      for (let rank = 1; rank <= 13; rank++) {
+        cards.push({ id: `${suit}-${rank}-${copy}`, suit, rank, faceUp: false })
+      }
+      copy++
+    }
+  }
+  return cards
+}
+
 // Fisher-Yates shuffle using an optional seed-less RNG.
 export function shuffle<T>(input: T[]): T[] {
   const arr = input.slice()
