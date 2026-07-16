@@ -669,17 +669,23 @@ button {
   display: grid;
   place-items: center;
   z-index: 5;
+  perspective: 1500px;
+  perspective-origin: 50% 34%;
 }
 
 .table {
   width: max-content;
   max-width: 96vw;
-  margin-top: 34px;
+  margin-top: 30px;
   padding: 22px 26px 28px;
   border-radius: 26px;
   background: linear-gradient(to bottom, #7a5533 0%, #5a3c22 45%, #3f2915 100%);
   border: 1px solid #8a6136;
-  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.62), 0 0 60px rgba(120, 90, 40, 0.25),
+  /* 3D table: tilt the playfield back and give the frame real thickness. */
+  transform: rotateX(20deg);
+  transform-style: preserve-3d;
+  box-shadow: 0 6px 0 #3c2814, 0 12px 0 #33220f, 0 18px 0 #2a1c0d,
+    0 44px 60px rgba(0, 0, 0, 0.7), 0 0 70px rgba(120, 90, 40, 0.28),
     inset 0 2px 3px rgba(255, 214, 150, 0.35), inset 0 -6px 18px rgba(0, 0, 0, 0.5);
   position: relative;
 }
@@ -714,12 +720,14 @@ button {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  transform-style: preserve-3d;
 }
 
 .board-row {
   display: flex;
   gap: 8px;
   align-items: flex-start;
+  transform-style: preserve-3d;
 }
 
 .slot-spacer {
@@ -732,11 +740,13 @@ button {
   min-height: var(--card-h);
   flex: 0 0 auto;
   position: relative;
+  transform-style: preserve-3d;
 }
 
 .tableau-col {
   position: relative;
   min-height: calc(var(--card-h) + 340px);
+  transform-style: preserve-3d;
 }
 
 .empty-slot {
@@ -781,10 +791,15 @@ button {
   height: var(--card-h);
   border-radius: 10px;
   cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.25) inset;
+  /* Stacked hard shadows read as card thickness under the tilted table. */
+  box-shadow: 0 2px 0 rgba(18, 12, 6, 0.28), 0 3px 0 rgba(18, 12, 6, 0.22),
+    0 5px 0 rgba(18, 12, 6, 0.16), 0 11px 15px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.25) inset;
   position: relative;
   overflow: hidden;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transform: translateZ(2px);
+  transform-style: preserve-3d;
+  transition: transform 0.13s ease, box-shadow 0.13s ease;
 }
 
 .tableau-col .card {
@@ -853,14 +868,14 @@ button {
 }
 
 .card-face:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 18px rgba(0, 0, 0, 0.5);
+  transform: translateZ(28px) translateY(-2px);
+  box-shadow: 0 18px 26px rgba(0, 0, 0, 0.55);
   z-index: 4;
 }
 
 .card.selected {
-  transform: translateY(-8px) scale(1.02);
-  box-shadow: 0 12px 22px rgba(0, 0, 0, 0.55), 0 0 20px 3px rgba(244, 207, 107, 0.75);
+  transform: translateZ(46px) scale(1.03);
+  box-shadow: 0 22px 32px rgba(0, 0, 0, 0.6), 0 0 22px 4px rgba(244, 207, 107, 0.8);
   outline: 2px solid var(--gold);
   z-index: 5;
 }

@@ -13,8 +13,8 @@ interface Props {
   onPileClick: (pileId: string, kind: string) => void
 }
 
-const FAN_UP = 30
-const FAN_DOWN = 13
+const FAN_UP = 34
+const FAN_DOWN = 14
 const FAN_RIGHT = 18
 
 function cardWidthFor(cols: number): number {
