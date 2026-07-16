@@ -5,7 +5,7 @@ import { GameState } from '../game/engine'
 import { Metrics, objectiveMet } from '../game/objectives'
 import { SessionContext, Stats, WinResult, masteryLevel } from '../game/stats'
 import { getWorld } from '../game/worlds'
-import { ResourceBar } from './Chrome'
+import { themeForSession } from '../three/boardThemes'
 import { Board3D } from './Board3D'
 import { Victory } from './Victory'
 
@@ -62,8 +62,12 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
   const [undosUsed, setUndosUsed] = useState(0)
   const [cycled, setCycled] = useState(false)
   const [result, setResult] = useState<WinResult | null>(null)
+  const [paused, setPaused] = useState(false)
+  const [muted, setMuted] = useState(false)
 
   const startTime = useRef(Date.now())
+  const pausedAt = useRef(0)
+  const theme = themeForSession(session.worldId, engine.family)
   const dealToken = useRef(0)
   const startedTokens = useRef<Set<number>>(new Set())
 
@@ -76,10 +80,21 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
   }, [session.engineId])
 
   useEffect(() => {
-    if (won) return
+    if (won || paused) return
     const id = window.setInterval(() => setElapsed(Date.now() - startTime.current), 400)
     return () => window.clearInterval(id)
-  }, [won])
+  }, [won, paused])
+
+  const togglePause = useCallback(() => {
+    setPaused((p) => {
+      if (!p) {
+        pausedAt.current = Date.now()
+      } else {
+        startTime.current += Date.now() - pausedAt.current
+      }
+      return !p
+    })
+  }, [])
 
   useEffect(() => {
     if (won || !engine.isWon(play.state)) return
@@ -127,6 +142,7 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
     setHintsUsed(0)
     setUndosUsed(0)
     setCycled(false)
+    setPaused(false)
     setMessage(session.objective.label)
     if (!startedTokens.current.has(dealToken.current)) {
       startedTokens.current.add(dealToken.current)
@@ -230,39 +246,54 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
       <div className="bg-vignette" />
 
       <div className="topbar game-topbar">
-        <div className="topbar-left">
-          <button className="back-btn" onClick={onExit} title="Back">
-            {'\u2039'} {world ? 'World' : 'Library'}
+        <div className="hud-group">
+          <button className="hud-btn" onClick={onExit} title="Back">
+            {'\u2039'} Back
           </button>
-          <div className="game-title-block">
-            <div className="game-title">{engine.name}</div>
-            <div className="game-sub">
-              {world ? `${world.name} \u00B7 Stage ${session.stage}` : 'Free Play'}
-              {` \u00B7 ${session.difficulty}`}
+          <button className="hud-btn" onClick={togglePause} title="Pause">
+            {'\u23F8'} Pause
+          </button>
+        </div>
+
+        <div className="game-title-block">
+          <div className="game-title">{engine.name}</div>
+          <div className="game-sub">{world ? world.name : 'Free Play'}</div>
+          <div className="game-stage">
+            {world ? `Stage ${session.stage} \u00B7 ${session.difficulty}` : session.difficulty}
+          </div>
+        </div>
+
+        <div className="hud-right">
+          <div className="hud-stats">
+            <div className="stat">
+              <span>Moves</span>
+              <b>{play.moves}</b>
+            </div>
+            <div className="stat">
+              <span>Time</span>
+              <b>{fmtClock(elapsed)}</b>
+            </div>
+            <div className="stat">
+              <span>Score</span>
+              <b>{play.score.toLocaleString()}</b>
+            </div>
+            <div className={`stat${play.combo > 1 ? ' hot' : ''}`}>
+              <span>Combo</span>
+              <b>x{play.combo}</b>
             </div>
           </div>
-        </div>
-
-        <div className="hud-chips">
-          <div className="chip">
-            <span className="chip-label">Moves</span>
-            <span className="chip-value">{play.moves}</span>
-          </div>
-          <div className="chip">
-            <span className="chip-label">Time</span>
-            <span className="chip-value">{fmtClock(elapsed)}</span>
-          </div>
-          <div className="chip">
-            <span className="chip-label">Score</span>
-            <span className="chip-value">{play.score.toLocaleString()}</span>
-          </div>
-          <div className={`chip combo${play.combo > 1 ? ' hot' : ''}`}>
-            <span className="chip-label">Combo</span>
-            <span className="chip-value">x{play.combo}</span>
+          <div className="hud-res">
+            <span className="res-mini">
+              {'\uD83D\uDFE1'} {stats.gold.toLocaleString()}
+            </span>
+            <span className="res-mini">
+              {'\uD83D\uDC8E'} {stats.gems.toLocaleString()}
+            </span>
+            <button className="hud-btn small" onClick={() => setMuted((mm) => !mm)} title="Audio">
+              {muted ? '\uD83D\uDD08' : '\uD83D\uDD0A'}
+            </button>
           </div>
         </div>
-
-        <ResourceBar stats={stats} />
       </div>
 
       <div className="left-panels">
@@ -314,42 +345,48 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
           state={play.state}
           selection={selection}
           hint={hint}
+          theme={theme}
           onCardClick={onCardClick}
           onCardDouble={onCardDouble}
           onPileClick={doPileClick}
         />
       </div>
 
-      <div className="bottom-bar">
-        <div className="controls">
-          <button className="control-btn" onClick={showHint}>
-            <span className="control-icon">{'\uD83D\uDCA1'}</span>
+      <div className="bottom-dock">
+        <div className="message-float">{message}</div>
+        <div className="toolbar">
+          <button className="tool-btn" onClick={showHint}>
+            <span className="tool-icon">{'\uD83D\uDCA1'}</span>
             <span>Hint</span>
             {hintsUsed ? <span className="ctrl-badge">{hintsUsed}</span> : null}
           </button>
-          <button className="control-btn" onClick={undo} disabled={!history.length}>
-            <span className="control-icon">{'\u21A9'}</span>
+          <button className="tool-btn" onClick={undo} disabled={!history.length}>
+            <span className="tool-icon">{'\u21A9'}</span>
             <span>Undo</span>
             {history.length ? <span className="ctrl-badge">{history.length}</span> : null}
           </button>
-          <button className="control-btn" onClick={restart}>
-            <span className="control-icon">{'\uD83D\uDD01'}</span>
+          <button className="tool-btn" onClick={restart}>
+            <span className="tool-icon">{'\uD83D\uDD01'}</span>
             <span>Restart</span>
           </button>
-          <button className="control-btn" onClick={() => setMessage('Settings are coming soon.')}>
-            <span className="control-icon">{'\u2699'}</span>
+          <button className="tool-btn" onClick={togglePause}>
+            <span className="tool-icon">{'\u2699'}</span>
             <span>Settings</span>
           </button>
         </div>
-        <div className="message-banner">{message}</div>
-        <button className="wild-card-btn" title="Wild Card">
-          <div className="card card-back mini">
-            <div className="card-back-emblem">{'\u269C'}</div>
-          </div>
-          <span>Wild Card</span>
-          <span className="badge">1</span>
-        </button>
       </div>
+
+      {paused && (
+        <div className="pause-overlay" onClick={togglePause}>
+          <div className="win-card">
+            <div className="win-title">Paused</div>
+            <div className="win-sub">Take a breath, adventurer.</div>
+            <button className="win-btn" onClick={togglePause}>
+              Resume
+            </button>
+          </div>
+        </div>
+      )}
 
       {won && result && (
         <Victory

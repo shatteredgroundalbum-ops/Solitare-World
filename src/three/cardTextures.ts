@@ -120,6 +120,43 @@ export function backTexture(): THREE.CanvasTexture {
   return backTex
 }
 
+const emblemCache = new Map<string, THREE.CanvasTexture>()
+
+// A themed placeholder drawn on empty piles (crest / anchor / gem / ankh ...).
+export function emblemTexture(glyph: string, colorHex: string): THREE.CanvasTexture {
+  const key = `${glyph}-${colorHex}`
+  const cached = emblemCache.get(key)
+  if (cached) return cached
+
+  const canvas = document.createElement('canvas')
+  canvas.width = W
+  canvas.height = H
+  const ctx = canvas.getContext('2d')!
+  ctx.clearRect(0, 0, W, H)
+
+  ctx.fillStyle = 'rgba(0,0,0,0.30)'
+  roundRect(ctx, 8, 8, W - 16, H - 16, 22)
+  ctx.fill()
+
+  ctx.lineWidth = 4
+  ctx.strokeStyle = colorHex
+  ctx.globalAlpha = 0.5
+  roundRect(ctx, 16, 16, W - 32, H - 32, 18)
+  ctx.stroke()
+
+  ctx.globalAlpha = 0.55
+  ctx.fillStyle = colorHex
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.font = 'bold 150px Georgia, serif'
+  ctx.fillText(glyph, W / 2, H / 2 + 8)
+  ctx.globalAlpha = 1
+
+  const tex = finalize(canvas)
+  emblemCache.set(key, tex)
+  return tex
+}
+
 export function edgeTexture(): THREE.CanvasTexture {
   if (edgeTex) return edgeTex
   const canvas = document.createElement('canvas')
