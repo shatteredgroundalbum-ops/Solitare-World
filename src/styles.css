@@ -143,20 +143,20 @@ button {
     transform: translate(0, 0);
     opacity: 0;
   }
-  10% {
-    opacity: 0.8;
+  8% {
+    opacity: 0.95;
   }
-  90% {
-    opacity: 0.8;
+  92% {
+    opacity: 0.95;
   }
   100% {
-    transform: translate(48vw, -10vh);
+    transform: translate(52vw, -12vh);
     opacity: 0;
   }
 }
 
 .bird {
-  width: 16px;
+  width: 22px;
   height: 16px;
   position: relative;
 }
@@ -166,30 +166,30 @@ button {
   content: '';
   position: absolute;
   top: 0;
-  width: 10px;
-  height: 4px;
-  border-top: 2px solid rgba(30, 30, 40, 0.75);
+  width: 15px;
+  height: 5px;
+  border-top: 3px solid rgba(24, 24, 34, 0.92);
   border-radius: 50%;
   transform-origin: 100% 50%;
-  animation: flap 0.5s ease-in-out infinite;
+  animation: flap 0.42s ease-in-out infinite;
 }
 
 .bird::before {
-  left: -6px;
+  left: -9px;
 }
 
 .bird::after {
-  right: -6px;
+  right: -9px;
   transform-origin: 0 50%;
 }
 
 @keyframes flap {
   0%,
   100% {
-    transform: rotate(18deg);
+    transform: rotate(22deg);
   }
   50% {
-    transform: rotate(-14deg);
+    transform: rotate(-16deg);
   }
 }
 
@@ -204,11 +204,11 @@ button {
   position: absolute;
   left: 0;
   bottom: 0;
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(210, 210, 210, 0.55), rgba(210, 210, 210, 0) 72%);
-  animation: rise 5.4s ease-in infinite;
+  background: radial-gradient(closest-side, rgba(220, 220, 220, 0.7), rgba(220, 220, 220, 0) 72%);
+  animation: rise 4.4s ease-in infinite;
   opacity: 0;
 }
 
@@ -218,10 +218,10 @@ button {
     opacity: 0;
   }
   20% {
-    opacity: 0.7;
+    opacity: 0.8;
   }
   100% {
-    transform: translate(-26px, -120px) scale(2.6);
+    transform: translate(-34px, -150px) scale(3.2);
     opacity: 0;
   }
 }
@@ -242,17 +242,25 @@ button {
   background: linear-gradient(to bottom, #d9c07a, #8a6a2a);
 }
 
+.flag {
+  height: 56px;
+}
+
+.flag-pole {
+  height: 56px;
+}
+
 .flag-cloth {
   position: absolute;
   left: 2px;
   top: 2px;
-  width: 26px;
-  height: 16px;
-  background: linear-gradient(120deg, #c8352f, #8c1f1c);
-  clip-path: polygon(0 0, 100% 0, 88% 50%, 100% 100%, 0 100%);
+  width: 42px;
+  height: 24px;
+  background: linear-gradient(120deg, #e0403a, #8c1f1c);
+  clip-path: polygon(0 0, 100% 0, 86% 50%, 100% 100%, 0 100%);
   transform-origin: left center;
-  animation: wave 2.4s ease-in-out infinite;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  animation: wave 1.8s ease-in-out infinite;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
 }
 
 @keyframes wave {
@@ -260,11 +268,34 @@ button {
   100% {
     transform: skewY(0deg) scaleX(1);
   }
-  30% {
-    transform: skewY(4deg) scaleX(0.94);
+  25% {
+    transform: skewY(7deg) scaleX(0.9);
   }
   60% {
-    transform: skewY(-4deg) scaleX(1.02);
+    transform: skewY(-7deg) scaleX(1.04);
+  }
+}
+
+.mist {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34%;
+  background: linear-gradient(to top, rgba(230, 235, 245, 0.16), rgba(230, 235, 245, 0));
+  mix-blend-mode: screen;
+  animation: mist-drift 24s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+@keyframes mist-drift {
+  from {
+    transform: translateX(-3%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(3%);
+    opacity: 1;
   }
 }
 

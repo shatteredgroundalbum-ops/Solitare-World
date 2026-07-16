@@ -14,6 +14,16 @@ Three solitaire families share one engine + renderer:
 
 The full concept **Library** (Pyramid, Golf, Yukon, Forty Thieves, etc.) is listed and categorized; unimplemented variants are marked "Coming soon". Player level, per-game mastery, and lifetime statistics persist in `localStorage`.
 
+## Worlds & progression
+
+The variants are tied together into an exploration meta:
+
+- A **living home screen** (drifting clouds, flying birds, waving flag, chimney smoke, slow day/night) with a hierarchical layout: a hero **Continue Adventure** button, a **Now Playing** card, and progression bars (level, world completion, daily/weekly/season/collection).
+- A **World Map** where each world maps to a solitaire family (Medieval Kingdom → Klondike, Pirate Isles → Spider, Crystal Caverns → FreeCell, Dragon's Keep → expert). Worlds unlock by level and fill in as you clear stages.
+- **Stages** with escalating **difficulty** and **dynamic objectives** (win under 4:00, no hints, few moves, no undo, don't recycle the stock).
+- A rich in-game **HUD** (moves, timer, score, combo, objective, mastery, streak) and **animated victories** (confetti + coin burst + objective bonus).
+- A **Collection museum** of card backs, tables, trophies, and pets.
+
 ## Tech stack
 
 - [Vite](https://vitejs.dev/) (dev server + build)

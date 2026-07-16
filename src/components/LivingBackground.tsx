@@ -1,17 +1,21 @@
 import { CSSProperties } from 'react'
 
 const CLOUDS: CSSProperties[] = [
-  { top: '10%', width: 220, height: 60, animationDuration: '68s', opacity: 0.7 },
-  { top: '18%', width: 300, height: 78, animationDuration: '92s', animationDelay: '-30s', opacity: 0.55 },
-  { top: '6%', width: 160, height: 46, animationDuration: '54s', animationDelay: '-12s', opacity: 0.8 },
-  { top: '24%', width: 260, height: 70, animationDuration: '110s', animationDelay: '-70s', opacity: 0.45 },
+  { top: '9%', width: 240, height: 66, animationDuration: '42s', opacity: 0.85 },
+  { top: '17%', width: 320, height: 84, animationDuration: '58s', animationDelay: '-20s', opacity: 0.7 },
+  { top: '5%', width: 180, height: 52, animationDuration: '34s', animationDelay: '-12s', opacity: 0.9 },
+  { top: '23%', width: 280, height: 74, animationDuration: '66s', animationDelay: '-44s', opacity: 0.6 },
+  { top: '13%', width: 150, height: 44, animationDuration: '30s', animationDelay: '-8s', opacity: 0.8 },
 ]
 
 const BIRDS = [
-  { top: '22%', left: '12%', delay: '0s', dur: '14s', scale: 1 },
-  { top: '18%', left: '30%', delay: '-4s', dur: '17s', scale: 0.8 },
-  { top: '28%', left: '22%', delay: '-9s', dur: '20s', scale: 1.15 },
-  { top: '15%', left: '46%', delay: '-6s', dur: '16s', scale: 0.7 },
+  { top: '20%', left: '8%', delay: '0s', dur: '9s', scale: 1.3 },
+  { top: '16%', left: '20%', delay: '-2s', dur: '11s', scale: 1 },
+  { top: '26%', left: '14%', delay: '-5s', dur: '10s', scale: 1.5 },
+  { top: '13%', left: '34%', delay: '-3s', dur: '12s', scale: 0.9 },
+  { top: '23%', left: '28%', delay: '-7s', dur: '9.5s', scale: 1.2 },
+  { top: '30%', left: '40%', delay: '-4s', dur: '13s', scale: 1.1 },
+  { top: '18%', left: '48%', delay: '-8s', dur: '10.5s', scale: 0.8 },
 ]
 
 /**
@@ -46,11 +50,12 @@ export function LivingBackground() {
         ))}
       </div>
 
-      <div className="flag" style={{ left: '70.5%', top: '20%' }}>
+      <div className="flag" style={{ left: '70.5%', top: '18%' }}>
         <span className="flag-pole" />
         <span className="flag-cloth" />
       </div>
 
+      <div className="mist" />
       <div className="day-night" />
       <div className="bg-vignette" />
     </div>
