@@ -1,189 +1,290 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Engine, GameState, Hint, MoveRef } from '../game/engine'
-import { Stats, masteryLevel } from '../game/stats'
-import { IconButton, PlayerCard, ResourceBar } from './Chrome'
+import { ENGINES } from '../game/registry'
+import { GameSession } from '../game/session'
+import { GameState } from '../game/engine'
+import { Metrics, objectiveMet } from '../game/objectives'
+import { SessionContext, Stats, WinResult, masteryLevel } from '../game/stats'
+import { getWorld } from '../game/worlds'
+import { ResourceBar } from './Chrome'
 import { Board } from './Board'
+import { Victory } from './Victory'
 
 interface Props {
-  engine: Engine
+  session: GameSession
   stats: Stats
-  onStart: (id: string) => void
-  onWin: (id: string, elapsedMs: number) => void
+  onStart: (ctx: SessionContext) => void
+  onWin: (ctx: SessionContext, result: WinResult) => void
+  onNext: (() => void) | null
   onExit: () => void
 }
 
-export function GameScreen({ engine, stats, onStart, onWin, onExit }: Props) {
-  const [state, setState] = useState<GameState>(() => engine.create())
-  const [history, setHistory] = useState<GameState[]>([])
-  const [selection, setSelection] = useState<MoveRef | null>(null)
-  const [hint, setHint] = useState<Hint | null>(null)
+interface Play {
+  state: GameState
+  score: number
+  moves: number
+  combo: number
+}
+
+function foundationCount(s: GameState): number {
+  let n = 0
+  for (const k of Object.keys(s.piles)) if (k.startsWith('fnd')) n += s.piles[k].length
+  return n
+}
+
+function fmtClock(ms: number): string {
+  const total = Math.floor(ms / 1000)
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: Props) {
+  const engine = ENGINES[session.engineId]
+  const ctx: SessionContext = {
+    gameId: session.engineId,
+    worldId: session.worldId,
+    stage: session.stage,
+  }
+
+  const [play, setPlay] = useState<Play>(() => ({
+    state: engine.create(),
+    score: 0,
+    moves: 0,
+    combo: 0,
+  }))
+  const [history, setHistory] = useState<Play[]>([])
+  const [selection, setSelection] = useState<{ pileId: string; cardIndex: number } | null>(null)
+  const [hint, setHint] = useState<ReturnType<typeof engine.hint>>(null)
   const [won, setWon] = useState(false)
-  const [message, setMessage] = useState(engine.instruction)
+  const [message, setMessage] = useState(session.objective.label)
+  const [elapsed, setElapsed] = useState(0)
+  const [hintsUsed, setHintsUsed] = useState(0)
+  const [undosUsed, setUndosUsed] = useState(0)
+  const [cycled, setCycled] = useState(false)
+  const [result, setResult] = useState<WinResult | null>(null)
+
   const startTime = useRef(Date.now())
   const dealToken = useRef(0)
   const startedTokens = useRef<Set<number>>(new Set())
 
-  // Count a game start once per deal (deduped for StrictMode double-invoke).
   useEffect(() => {
     if (!startedTokens.current.has(dealToken.current)) {
       startedTokens.current.add(dealToken.current)
-      onStart(engine.id)
+      onStart(ctx)
     }
-  }, [engine.id, onStart])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.engineId])
 
   useEffect(() => {
-    if (!won && engine.isWon(state)) {
-      setWon(true)
-      setMessage('You cleared the table! Rewards added.')
-      onWin(engine.id, Date.now() - startTime.current)
-    }
-  }, [state, won, engine, onWin])
+    if (won) return
+    const id = window.setInterval(() => setElapsed(Date.now() - startTime.current), 400)
+    return () => window.clearInterval(id)
+  }, [won])
 
-  const commit = useCallback((next: GameState) => {
-    setState((prev) => {
-      setHistory((h) => [...h.slice(-300), prev])
-      return next
+  useEffect(() => {
+    if (won || !engine.isWon(play.state)) return
+    const timeMs = Date.now() - startTime.current
+    const metrics: Metrics = { timeMs, hints: hintsUsed, undos: undosUsed, moves: play.moves, cycled }
+    const met = objectiveMet(session.objective, metrics, engine.family)
+    const finalScore = play.score + Math.max(0, 800 - Math.floor(timeMs / 1000) * 4) + (met ? 500 : 0)
+    const res: WinResult = { score: finalScore, timeMs, objectiveMet: met }
+    setWon(true)
+    setResult(res)
+    setMessage('You cleared the board!')
+    onWin(ctx, res)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [play.state, won])
+
+  const commit = useCallback((nextState: GameState, recycle = false) => {
+    setPlay((prev) => {
+      setHistory((h) => [...h.slice(-400), prev])
+      const gained = foundationCount(nextState) - foundationCount(prev.state)
+      let { score, combo } = prev
+      if (gained > 0) {
+        combo = prev.combo + 1
+        score += gained * (100 + combo * 25)
+      } else {
+        combo = 0
+        score += 4
+      }
+      if (recycle) score = Math.max(0, score - 20)
+      return { state: nextState, score, moves: prev.moves + 1, combo }
     })
     setSelection(null)
     setHint(null)
   }, [])
 
-  const newGame = useCallback(() => {
+  const restart = useCallback(() => {
     dealToken.current += 1
     startTime.current = Date.now()
-    setState(engine.create())
+    setPlay({ state: engine.create(), score: 0, moves: 0, combo: 0 })
     setHistory([])
     setSelection(null)
     setHint(null)
     setWon(false)
-    setMessage(engine.instruction)
+    setResult(null)
+    setElapsed(0)
+    setHintsUsed(0)
+    setUndosUsed(0)
+    setCycled(false)
+    setMessage(session.objective.label)
     if (!startedTokens.current.has(dealToken.current)) {
       startedTokens.current.add(dealToken.current)
-      onStart(engine.id)
+      onStart(ctx)
     }
-  }, [engine, onStart])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine, session, onStart])
 
   const undo = useCallback(() => {
     setHistory((h) => {
       if (!h.length) return h
-      setState(h[h.length - 1])
+      setPlay(h[h.length - 1])
       setSelection(null)
       setHint(null)
       setWon(false)
+      setResult(null)
       return h.slice(0, -1)
     })
+    setUndosUsed((n) => n + 1)
   }, [])
 
   const doPileClick = useCallback(
     (pileId: string, kind: string) => {
       if (kind === 'stock') {
-        const next = engine.clickPile(state, pileId)
+        const willRecycle = play.state.piles.stock?.length === 0 && play.state.piles.waste?.length > 0
+        const next = engine.clickPile(play.state, pileId)
         if (next) {
-          commit(next)
+          if (willRecycle) setCycled(true)
+          commit(next, willRecycle)
         } else {
           setMessage('Cannot deal right now.')
         }
         return
       }
-      if (selection && engine.canMove(state, selection, pileId)) {
-        commit(engine.applyMove(state, selection, pileId))
+      if (selection && engine.canMove(play.state, selection, pileId)) {
+        commit(engine.applyMove(play.state, selection, pileId))
       }
     },
-    [engine, state, selection, commit],
+    [engine, play.state, selection, commit],
   )
 
   const onCardClick = useCallback(
-    (ref: MoveRef, kind: string) => {
+    (ref: { pileId: string; cardIndex: number }, kind: string) => {
       if (kind === 'stock') {
         doPileClick(ref.pileId, kind)
         return
       }
       if (!selection) {
-        if (engine.canPickUp(state, ref)) {
+        if (engine.canPickUp(play.state, ref)) {
           setSelection(ref)
           setHint(null)
         }
         return
       }
-      if (engine.canMove(state, selection, ref.pileId)) {
-        commit(engine.applyMove(state, selection, ref.pileId))
+      if (engine.canMove(play.state, selection, ref.pileId)) {
+        commit(engine.applyMove(play.state, selection, ref.pileId))
         return
       }
       if (selection.pileId === ref.pileId && selection.cardIndex === ref.cardIndex) {
         setSelection(null)
         return
       }
-      setSelection(engine.canPickUp(state, ref) ? ref : null)
+      setSelection(engine.canPickUp(play.state, ref) ? ref : null)
       setHint(null)
     },
-    [engine, state, selection, commit, doPileClick],
+    [engine, play.state, selection, commit, doPileClick],
   )
 
   const onCardDouble = useCallback(
-    (ref: MoveRef) => {
-      const target = engine.autoTarget(state, ref)
-      if (target && engine.canMove(state, ref, target)) {
-        commit(engine.applyMove(state, ref, target))
+    (ref: { pileId: string; cardIndex: number }) => {
+      const target = engine.autoTarget(play.state, ref)
+      if (target && engine.canMove(play.state, ref, target)) {
+        commit(engine.applyMove(play.state, ref, target))
       }
     },
-    [engine, state, commit],
+    [engine, play.state, commit],
   )
 
   const showHint = useCallback(() => {
-    const h = engine.hint(state)
+    const h = engine.hint(play.state)
+    setHintsUsed((n) => n + 1)
     if (h) {
       setSelection(null)
       setHint(h)
       setMessage('Hint: try the glowing card.')
-    } else if (state.piles.stock && state.piles.stock.length > 0) {
+    } else if (play.state.piles.stock && play.state.piles.stock.length > 0) {
       setMessage('No board moves — draw from the stock pile.')
     } else {
-      setMessage('No moves available. Shuffle for a new deal.')
+      setMessage('No moves available. Restart for a new deal.')
     }
-  }, [engine, state])
+  }, [engine, play.state])
 
-  const m = stats.byGame[engine.id]
+  const m = stats.byGame[session.engineId]
   const mLevel = masteryLevel(m?.xp ?? 0)
+  const world = session.worldId ? getWorld(session.worldId) : undefined
+  const best = stats.bestScore[session.engineId] ?? 0
 
   return (
     <div className="game-root">
       <div className="bg-layer" />
       <div className="bg-vignette" />
 
-      <div className="topbar">
+      <div className="topbar game-topbar">
         <div className="topbar-left">
           <button className="back-btn" onClick={onExit} title="Back">
-            {'\u2039'} Library
+            {'\u2039'} {world ? 'World' : 'Library'}
           </button>
-          <PlayerCard stats={stats} />
+          <div className="game-title-block">
+            <div className="game-title">{engine.name}</div>
+            <div className="game-sub">
+              {world ? `${world.name} \u00B7 Stage ${session.stage}` : 'Free Play'}
+              {` \u00B7 ${session.difficulty}`}
+            </div>
+          </div>
         </div>
+
+        <div className="hud-chips">
+          <div className="chip">
+            <span className="chip-label">Moves</span>
+            <span className="chip-value">{play.moves}</span>
+          </div>
+          <div className="chip">
+            <span className="chip-label">Time</span>
+            <span className="chip-value">{fmtClock(elapsed)}</span>
+          </div>
+          <div className="chip">
+            <span className="chip-label">Score</span>
+            <span className="chip-value">{play.score.toLocaleString()}</span>
+          </div>
+          <div className={`chip combo${play.combo > 1 ? ' hot' : ''}`}>
+            <span className="chip-label">Combo</span>
+            <span className="chip-value">x{play.combo}</span>
+          </div>
+        </div>
+
         <ResourceBar stats={stats} />
-        <div className="nav-buttons">
-          <IconButton label="New" icon={'\uD83C\uDCCF'} onClick={newGame} />
-          <IconButton label="Menu" icon={'\u2630'} onClick={onExit} />
-        </div>
       </div>
 
       <div className="left-panels">
-        <div className="panel">
-          <div className="panel-title">{engine.name}</div>
+        <div className="panel objective-panel">
+          <div className="panel-title">Objective</div>
           <div className="panel-body">
-            <span className="chest-icon">{'\uD83C\uDFC5'}</span>
+            <span className="chest-icon">{'\uD83C\uDFAF'}</span>
             <div>
-              <div className="quest-text">Mastery {mLevel}</div>
-              <div className="quest-progress">
-                {m?.wins ?? 0} wins / {m?.plays ?? 0} plays
-              </div>
+              <div className="quest-text">{session.objective.short}</div>
+              <div className="quest-progress">{session.objective.label}</div>
             </div>
           </div>
         </div>
         <div className="panel">
-          <div className="panel-title">Family</div>
+          <div className="panel-title">Mastery {'\u00B7'} {engine.family}</div>
           <div className="panel-body">
-            <span className="loc-pin">{'\uD83D\uDCCD'}</span>
+            <span className="loc-pin">{'\uD83C\uDFC5'}</span>
             <div>
-              <div className="loc-name">{engine.family}</div>
-              <div className="loc-stage">Medieval Kingdom</div>
+              <div className="loc-name">Rank {mLevel}</div>
+              <div className="loc-stage">
+                {m?.wins ?? 0} wins {'\u00B7'} best {best.toLocaleString()}
+              </div>
             </div>
           </div>
         </div>
@@ -196,9 +297,14 @@ export function GameScreen({ engine, stats, onStart, onWin, onExit }: Props) {
           <div className="side-value">{stats.currentStreak}</div>
         </div>
         <div className="side-stat">
-          <div className="side-title">Wins</div>
+          <div className="side-title">Stars</div>
           <div className="side-icon star">{'\u2B50'}</div>
-          <div className="side-value">{stats.gamesWon}</div>
+          <div className="side-value">{stats.objectivesMet}</div>
+        </div>
+        <div className="side-stat">
+          <div className="side-title">Reward</div>
+          <div className="side-icon">{'\u2728'}</div>
+          <div className="side-value">+120 XP</div>
         </div>
       </div>
 
@@ -206,7 +312,7 @@ export function GameScreen({ engine, stats, onStart, onWin, onExit }: Props) {
         <div className="table">
           <Board
             engine={engine}
-            state={state}
+            state={play.state}
             selection={selection}
             hint={hint}
             onCardClick={onCardClick}
@@ -221,15 +327,20 @@ export function GameScreen({ engine, stats, onStart, onWin, onExit }: Props) {
           <button className="control-btn" onClick={showHint}>
             <span className="control-icon">{'\uD83D\uDCA1'}</span>
             <span>Hint</span>
+            {hintsUsed ? <span className="ctrl-badge">{hintsUsed}</span> : null}
           </button>
           <button className="control-btn" onClick={undo} disabled={!history.length}>
             <span className="control-icon">{'\u21A9'}</span>
             <span>Undo</span>
             {history.length ? <span className="ctrl-badge">{history.length}</span> : null}
           </button>
-          <button className="control-btn" onClick={newGame}>
-            <span className="control-icon">{'\uD83D\uDD00'}</span>
-            <span>Shuffle</span>
+          <button className="control-btn" onClick={restart}>
+            <span className="control-icon">{'\uD83D\uDD01'}</span>
+            <span>Restart</span>
+          </button>
+          <button className="control-btn" onClick={() => setMessage('Settings are coming soon.')}>
+            <span className="control-icon">{'\u2699'}</span>
+            <span>Settings</span>
           </button>
         </div>
         <div className="message-banner">{message}</div>
@@ -242,19 +353,16 @@ export function GameScreen({ engine, stats, onStart, onWin, onExit }: Props) {
         </button>
       </div>
 
-      {won && (
-        <div className="win-overlay" onClick={newGame}>
-          <div className="win-card">
-            <div className="win-title">Victory!</div>
-            <div className="win-sub">
-              {engine.name} {'\u2014'} Mastery {mLevel}
-            </div>
-            <div className="win-rewards">+500 Gold &nbsp; +120 XP &nbsp; Streak {stats.currentStreak}</div>
-            <button className="win-btn" onClick={newGame}>
-              Play Next Hand
-            </button>
-          </div>
-        </div>
+      {won && result && (
+        <Victory
+          engineName={engine.name}
+          session={session}
+          result={result}
+          masteryLevel={mLevel}
+          onNext={onNext}
+          onRestart={restart}
+          onExit={onExit}
+        />
       )}
     </div>
   )
