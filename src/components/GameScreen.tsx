@@ -6,7 +6,7 @@ import { Metrics, objectiveMet } from '../game/objectives'
 import { SessionContext, Stats, WinResult, masteryLevel } from '../game/stats'
 import { getWorld } from '../game/worlds'
 import { ResourceBar } from './Chrome'
-import { Board } from './Board'
+import { Board3D } from './Board3D'
 import { Victory } from './Victory'
 
 interface Props {
@@ -309,17 +309,15 @@ export function GameScreen({ session, stats, onStart, onWin, onNext, onExit }: P
       </div>
 
       <div className="table-wrap">
-        <div className="table">
-          <Board
-            engine={engine}
-            state={play.state}
-            selection={selection}
-            hint={hint}
-            onCardClick={onCardClick}
-            onCardDouble={onCardDouble}
-            onPileClick={doPileClick}
-          />
-        </div>
+        <Board3D
+          engine={engine}
+          state={play.state}
+          selection={selection}
+          hint={hint}
+          onCardClick={onCardClick}
+          onCardDouble={onCardDouble}
+          onPileClick={doPileClick}
+        />
       </div>
 
       <div className="bottom-bar">

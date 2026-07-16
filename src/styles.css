@@ -666,87 +666,18 @@ button {
 .table-wrap {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
   z-index: 5;
-  perspective: 1500px;
-  perspective-origin: 50% 34%;
 }
 
-.table {
-  width: max-content;
-  max-width: 96vw;
-  margin-top: 30px;
-  padding: 22px 26px 28px;
-  border-radius: 26px;
-  background: linear-gradient(to bottom, #7a5533 0%, #5a3c22 45%, #3f2915 100%);
-  border: 1px solid #8a6136;
-  /* 3D table: tilt the playfield back and give the frame real thickness. */
-  transform: rotateX(20deg);
-  transform-style: preserve-3d;
-  box-shadow: 0 6px 0 #3c2814, 0 12px 0 #33220f, 0 18px 0 #2a1c0d,
-    0 44px 60px rgba(0, 0, 0, 0.7), 0 0 70px rgba(120, 90, 40, 0.28),
-    inset 0 2px 3px rgba(255, 214, 150, 0.35), inset 0 -6px 18px rgba(0, 0, 0, 0.5);
-  position: relative;
-}
-
-/* Gold inlay ring on the frame. */
-.table::after {
-  content: '';
+/* WebGL board fills the play area; HUD/panels sit above it. */
+.board3d {
   position: absolute;
-  inset: 8px;
-  border-radius: 20px;
-  border: 1.5px solid rgba(244, 207, 107, 0.4);
-  box-shadow: 0 0 12px rgba(244, 207, 107, 0.18);
-  pointer-events: none;
+  inset: 0;
 }
 
-/* Felt playfield with a soft top sheen and dotted texture. */
-.table::before {
-  content: '';
-  position: absolute;
-  inset: 14px;
-  border-radius: 18px;
-  background: radial-gradient(120% 130% at 50% 12%, #37727f 0%, #1c4650 48%, #0e2c34 100%),
-    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.4px);
-  background-size: cover, 16px 16px;
-  box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.6), inset 0 2px 0 rgba(255, 255, 255, 0.06);
-  pointer-events: none;
-}
-
-.board {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  transform-style: preserve-3d;
-}
-
-.board-row {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  transform-style: preserve-3d;
-}
-
-.slot-spacer {
-  flex: 1 1 auto;
-  min-width: 12px;
-}
-
-.pile {
-  width: var(--card-w);
-  min-height: var(--card-h);
-  flex: 0 0 auto;
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-.tableau-col {
-  position: relative;
-  min-height: calc(var(--card-h) + 340px);
-  transform-style: preserve-3d;
+.board3d canvas {
+  display: block;
+  touch-action: none;
 }
 
 .empty-slot {
